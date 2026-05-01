@@ -26,10 +26,15 @@ jobs:
               run: |
                   sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
                   sudo xcodebuild -license accept
-            
+
             - name: Download Test Vectors
               run: |
                   ./Scripts/download-test-vectors.sh
+
+            - name: Fix CI errors
+              run: |
+                  rm Sources/COpenACFFI/include/module.modulemap
+                  rm Sources/COpenACFFI/include/openac_mobile_appFFI.h
 
             - name: Run Package Tests
               run: |
