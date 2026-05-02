@@ -268,7 +268,7 @@ RustBuffer uniffi_openac_mobile_app_fn_func_create_smt_proof_from_gz(RustBuffer 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENAC_MOBILE_APP_FN_FUNC_GENERATE_CERT_CHAIN_RS4096_INPUT
 #define UNIFFI_FFIDEF_UNIFFI_OPENAC_MOBILE_APP_FN_FUNC_GENERATE_CERT_CHAIN_RS4096_INPUT
-RustBuffer uniffi_openac_mobile_app_fn_func_generate_cert_chain_rs4096_input(RustBuffer certb64, RustBuffer signed_response, RustBuffer tbs, RustBuffer issuer_cert_path, RustBuffer smt_snapshot_path, RustBuffer output_dir, RustBuffer pk_blind, RustBuffer challenge, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_openac_mobile_app_fn_func_generate_cert_chain_rs4096_input(RustBuffer certb64, RustBuffer signed_response, RustBuffer tbs, RustBuffer issuer_cert_path, RustBuffer smt_snapshot_path, RustBuffer output_dir, RustBuffer challenge, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENAC_MOBILE_APP_FN_FUNC_LINK_VERIFY

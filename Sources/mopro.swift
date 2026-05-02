@@ -1190,7 +1190,7 @@ public func createSmtProofFromGz(gzData: Data, keyHex: String)throws  -> SmtProo
  * number, produced by `create_smt_proof_from_gz` / `create_smt_proof`.
  * Pass `None` to omit SMT revocation checking.
  */
-public func generateCertChainRs4096Input(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtSnapshotPath: String?, outputDir: String, pkBlind: String, challenge: String)throws  -> String  {
+public func generateCertChainRs4096Input(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtSnapshotPath: String?, outputDir: String, challenge: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
     uniffi_openac_mobile_app_fn_func_generate_cert_chain_rs4096_input(
         FfiConverterString.lower(certb64),
@@ -1199,7 +1199,6 @@ public func generateCertChainRs4096Input(certb64: String, signedResponse: String
         FfiConverterString.lower(issuerCertPath),
         FfiConverterOptionString.lower(smtSnapshotPath),
         FfiConverterString.lower(outputDir),
-        FfiConverterString.lower(pkBlind),
         FfiConverterString.lower(challenge),$0
     )
 })
@@ -1364,7 +1363,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_openac_mobile_app_checksum_func_create_smt_proof_from_gz() != 33213) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 19694) {
+    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 55912) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_link_verify() != 4694) {
