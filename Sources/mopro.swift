@@ -1178,11 +1178,11 @@ public func createSmtProofFromGz(gzData: Data, keyHex: String)throws  -> SmtProo
 })
 }
 /**
- * Generate split circuit inputs for both cert_chain_rs4096 and device_sig_rs2048.
+ * Generate split circuit inputs for both cert_chain_rs4096 and user_sig_rs2048.
  *
  * Writes two JSON files into `output_dir`:
  * - `cert_chain_rs4096_input.json`
- * - `device_sig_rs2048_input.json`
+ * - `user_sig_rs2048_input.json`
  *
  * These are the input files expected by `prove` via `PathConfig::mobile`.
  *
@@ -1204,7 +1204,7 @@ public func generateCertChainRs4096Input(certb64: String, signedResponse: String
 })
 }
 /**
- * Verify proofs for cert_chain_rs4096 and device_sig_rs2048 circuits.
+ * Verify proofs for cert_chain_rs4096 and user_sig_rs2048 circuits.
  */
 public func linkVerify(documentsPath: String)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
@@ -1241,26 +1241,26 @@ public func proveCertChainRs4096(documentsPath: String)throws  -> ProofResult  {
 })
 }
 /**
- * Generate proofs for both cert_chain_rs4096 and device_sig_rs2048 circuits.
+ * Generate proofs for both cert_chain_rs4096 and user_sig_rs2048 circuits.
  *
  * Reads input JSONs via `PathConfig::mobile(documents_path)`:
  * - `{documents_path}/cert_chain_rs4096_input.json`
- * - `{documents_path}/device_sig_rs2048_input.json`
+ * - `{documents_path}/user_sig_rs2048_input.json`
  *
  * Writes proofs, instances, and witnesses under `{documents_path}/keys/`.
  *
  * Witnesses are pre-warmed before any Spartan2 key I/O so that witnesscalc's
  * C++ realloc runs on a clean heap and avoids macOS SIGSEGV from moved pointers.
  */
-public func proveDeviceSigRs2048(documentsPath: String)throws  -> ProofResult  {
+public func proveUserSigRs2048(documentsPath: String)throws  -> ProofResult  {
     return try  FfiConverterTypeProofResult_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_prove_device_sig_rs2048(
+    uniffi_openac_mobile_app_fn_func_prove_user_sig_rs2048(
         FfiConverterString.lower(documentsPath),$0
     )
 })
 }
 /**
- * Run complete benchmark pipeline for both cert_chain_rs4096 and device_sig_rs2048 circuits.
+ * Run complete benchmark pipeline for both cert_chain_rs4096 and user_sig_rs2048 circuits.
  *
  * Witnesses are pre-warmed on a clean heap before Spartan2 setup to prevent macOS SIGSEGV:
  * witnesscalc's C++ `realloc()` moves large allocations on a fragmented heap, leaving stale
@@ -1276,10 +1276,10 @@ public func runCompleteBenchmark(documentsPath: String)throws  -> BenchmarkResul
 })
 }
 /**
- * Setup circuit keys for both cert_chain_rs4096 and device_sig_rs2048.
+ * Setup circuit keys for both cert_chain_rs4096 and user_sig_rs2048.
  *
  * Requires that `{documents_path}/cert_chain_rs4096.r1cs` and
- * `{documents_path}/device_sig_rs2048.r1cs` are present.
+ * `{documents_path}/user_sig_rs2048.r1cs` are present.
  */
 public func setupKeys(documentsPath: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
@@ -1314,16 +1314,6 @@ public func verifyCertChainRs4096(documentsPath: String)throws  -> Bool  {
 })
 }
 /**
- * Verify proofs for device_sig_rs2048 circuit.
- */
-public func verifyDeviceSigRs2048(documentsPath: String)throws  -> Bool  {
-    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_verify_device_sig_rs2048(
-        FfiConverterString.lower(documentsPath),$0
-    )
-})
-}
-/**
  * Verify an SMT non-membership (or membership) proof against a trusted root.
  *
  * Recomputes the Merkle root from `proof.entry` + `proof.siblings` using
@@ -1335,6 +1325,16 @@ public func verifySmtProof(proof: SmtProof, expectedRoot: String) -> Bool  {
     uniffi_openac_mobile_app_fn_func_verify_smt_proof(
         FfiConverterTypeSmtProof_lower(proof),
         FfiConverterString.lower(expectedRoot),$0
+    )
+})
+}
+/**
+ * Verify proofs for user_sig_rs2048 circuit.
+ */
+public func verifyUserSigRs2048(documentsPath: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_verify_user_sig_rs2048(
+        FfiConverterString.lower(documentsPath),$0
     )
 })
 }
@@ -1363,10 +1363,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_openac_mobile_app_checksum_func_create_smt_proof_from_gz() != 33213) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 55912) {
+    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 13849) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_link_verify() != 4694) {
+    if (uniffi_openac_mobile_app_checksum_func_link_verify() != 54000) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_mopro_hello_world() != 46672) {
@@ -1375,13 +1375,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_openac_mobile_app_checksum_func_prove_cert_chain_rs4096() != 42180) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_prove_device_sig_rs2048() != 31190) {
+    if (uniffi_openac_mobile_app_checksum_func_prove_user_sig_rs2048() != 56957) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 7344) {
+    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 17448) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 1011) {
+    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 52744) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_smt_proof_to_circuit_inputs() != 957) {
@@ -1390,10 +1390,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_openac_mobile_app_checksum_func_verify_cert_chain_rs4096() != 13705) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify_device_sig_rs2048() != 39939) {
+    if (uniffi_openac_mobile_app_checksum_func_verify_smt_proof() != 34213) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify_smt_proof() != 34213) {
+    if (uniffi_openac_mobile_app_checksum_func_verify_user_sig_rs2048() != 61446) {
         return InitializationResult.apiChecksumMismatch
     }
 
