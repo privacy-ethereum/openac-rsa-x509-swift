@@ -1278,8 +1278,8 @@ public func runCompleteBenchmark(documentsPath: String)throws  -> BenchmarkResul
 /**
  * Setup circuit keys for both cert_chain_rs4096 and user_sig_rs2048.
  *
- * Requires that `{documents_path}/cert_chain_rs4096.r1cs` and
- * `{documents_path}/user_sig_rs2048.r1cs` are present.
+ * Requires that `{documents_path}/certChainRS4096.r1cs` and
+ * `{documents_path}/userSigRS2048.r1cs` are present.
  */
 public func setupKeys(documentsPath: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
@@ -1381,7 +1381,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 17448) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 52744) {
+    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 42464) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_smt_proof_to_circuit_inputs() != 957) {
