@@ -138,7 +138,7 @@ struct OpenACSwiftTests {
   }
 
 
-  @Test func proveAndVerifyDeviceSigRs2048Succeeds() async throws {
+  @Test func proveAndVerifyUserSigRs2048Succeeds() async throws {
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048VerifyingKeyPath,
       "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
@@ -146,7 +146,7 @@ struct OpenACSwiftTests {
 
     _ = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
-    let valid = try verifyDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+    let valid = try verifyUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
     #expect(valid, "Verification should succeed after a valid proveUserSigRs2048 call.")
   }
@@ -212,7 +212,7 @@ struct OpenACSwiftTests {
   //   #expect(validCert, "Verification should succeed after a valid proveCertChainRs4096 call.")
   //   _ = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
-  //   let validDev = try verifyDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+  //   let validDev = try verifyUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
   //   #expect(validDev, "Verification should succeed after a valid proveUserSigRs2048 call.")
 
