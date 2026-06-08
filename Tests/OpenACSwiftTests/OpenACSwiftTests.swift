@@ -12,11 +12,11 @@ private enum TestSupport {
   }
 
   static var bundledCertChainRs4096R1CSPath: String? {
-    testBundle.path(forResource: "cert_chain_rs4096", ofType: "r1cs", inDirectory: "TestVectors")
+    testBundle.path(forResource: "certChainRS4096", ofType: "r1cs", inDirectory: "TestVectors")
   }
 
   static var bundledDeviceSigRs2048R1CSPath: String? {
-    testBundle.path(forResource: "user_sig_rs2048", ofType: "r1cs", inDirectory: "TestVectors")
+    testBundle.path(forResource: "userSigRS2048", ofType: "r1cs", inDirectory: "TestVectors")
   }
 
   static var bundledCertChainRs4096InputJSONPath: String? {
@@ -70,12 +70,12 @@ struct OpenACSwiftTests {
 
     _ = try #require(
       TestSupport.bundledCertChainRs4096R1CSPath,
-      "TestVectors/cert_chain_rs4096.r1cs must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/certChainRS4096.r1cs must be copied into the test bundle (see Package.swift resources)."
     )
 
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048R1CSPath,
-      "TestVectors/user_sig_rs2048.r1cs must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/userSigRS2048.r1cs must be copied into the test bundle (see Package.swift resources)."
     )
 
     let message = try setupKeys(
