@@ -44,10 +44,10 @@ download() {
     fi
 }
 
-download_and_gunzip "$BASE_URL/certChainRS4096.r1cs.gz" "" "cert_chain_rs4096.r1cs"
+download_and_gunzip "$BASE_URL/certChainRS4096.r1cs.gz" "" "certChainRS4096.r1cs"
 download_and_gunzip "$BASE_URL/cert_chain_rs4096_proving.key.gz" "keys"
 download_and_gunzip "$BASE_URL/cert_chain_rs4096_verifying.key.gz" "keys"
-download_and_gunzip "$BASE_URL/userSigRS2048.r1cs.gz" "" "user_sig_rs2048.r1cs"
+download_and_gunzip "$BASE_URL/userSigRS2048.r1cs.gz" "" "userSigRS2048.r1cs"
 download_and_gunzip "$BASE_URL/user_sig_rs2048_proving.key.gz" "keys"
 download_and_gunzip "$BASE_URL/user_sig_rs2048_verifying.key.gz" "keys"
 download "$SMT_BASE_URL/g3-tree-snapshot.json.gz"
