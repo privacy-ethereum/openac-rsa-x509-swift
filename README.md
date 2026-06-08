@@ -2,7 +2,7 @@
 
 Swift bindings for the OpenAC zero-knowledge proof system, enabling cert_chain_rs4096 and user_sig_rs2048 circuit proof generation and verification on iOS.
 
-The prebuilt binaries are distributed via the [zkID latest release](https://github.com/zkmopro/zkID/releases/tag/latest).
+The prebuilt binaries are distributed via the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
 
 ## Requirements
 
@@ -17,7 +17,7 @@ Add OpenACSwift to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/zkmopro/OpenACSwift", from: "1.0.0"),
+    .package(url: "https://github.com/privacy-ethereum/OpenACSwift", from: "1.0.0"),
 ],
 targets: [
     .target(
@@ -56,25 +56,26 @@ Before calling `setupKeys`, download the required files and place them in `docum
 
 **R1CS files** (directly in `documentsPath/`):
 
-| File | Download URL |
-|------|-------------|
-| `cert_chain_rs4096.r1cs` | [certChainRS4096.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/certChainRS4096.r1cs.gz) |
-| `user_sig_rs2048.r1cs` | [userSigRS2048.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/userSigRS2048.r1cs.gz) |
+| File                   | Download URL                                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `certChainRS4096.r1cs` | [certChainRS4096.r1cs.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/certChainRS2048.r1cs.gz) |
+| `userSigRS2048.r1cs`   | [userSigRS2048.r1cs.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/userSigRS2048.r1cs.gz)     |
 
 **Key files** (in `documentsPath/keys/`):
 
-| File | Download URL |
-|------|-------------|
-| `cert_chain_rs4096_proving.key` | [cert_chain_rs4096_proving.key.gz](https://github.com/zkmopro/zkID/releases/download/latest/cert_chain_rs4096_proving.key.gz) |
-| `cert_chain_rs4096_verifying.key` | [cert_chain_rs4096_verifying.key.gz](https://github.com/zkmopro/zkID/releases/download/latest/cert_chain_rs4096_verifying.key.gz) |
-| `user_sig_rs2048_proving.key` | [user_sig_rs2048_proving.key.gz](https://github.com/zkmopro/zkID/releases/download/latest/user_sig_rs2048_proving.key.gz) |
-| `user_sig_rs2048_verifying.key` | [user_sig_rs2048_verifying.key.gz](https://github.com/zkmopro/zkID/releases/download/latest/user_sig_rs2048_verifying.key.gz) |
+| File                              | Download URL                                                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cert_chain_rs4096_proving.key`   | [cert_chain_rs4096_proving.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/cert_chain_rs4096_proving.key.gz)     |
+| `cert_chain_rs4096_verifying.key` | [cert_chain_rs4096_verifying.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/cert_chain_rs4096_verifying.key.gz) |
+| `user_sig_rs2048_proving.key`     | [user_sig_rs2048_proving.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/user_sig_rs2048_proving.key.gz)         |
+| `user_sig_rs2048_verifying.key`   | [user_sig_rs2048_verifying.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/user_sig_rs2048_verifying.key.gz)     |
 
 The `.gz` key files must be decompressed before use (e.g. `gunzip *.gz`). The `.r1cs` files are also gzip-compressed — decompress them too.
 
 > **Note:** If you are using the example app, the download URLs for the proving keys and SMT snapshot are defined in `ProofViewModel.swift` and can be updated there.
 
 **Parameters:**
+
 - `documentsPath` — directory containing the `.r1cs` files and the `keys/` subdirectory
 
 **Returns:** a status string confirming completion.
@@ -96,6 +97,7 @@ print("Proved in \(devResult.proveMs) ms, size: \(devResult.proofSizeBytes) byte
 ```
 
 **Returns:** `ProofResult` with:
+
 - `proveMs: UInt64` — time taken to generate the proof in milliseconds
 - `proofSizeBytes: UInt64` — size of the generated proof in bytes
 
@@ -136,10 +138,12 @@ print("Input written to:", outputPath)
 ```
 
 This writes two files into `outputDir`:
+
 - `cert_chain_rs4096_input.json`
 - `user_sig_rs2048_input.json`
 
 **Parameters:**
+
 - `smtSnapshotPath` — path to the compressed SMT snapshot (`.json.gz`); pass `nil` to skip revocation checking
 - `challenge` — challenge string included in the circuit input
 
@@ -173,6 +177,7 @@ let circuitInputs: SmtCircuitInputs = try smtProofToCircuitInputs(proof: smtProo
 ```
 
 **`SmtProof`** fields:
+
 - `root: String` — tree root at proof time (hex)
 - `siblings: [String]` — sibling hashes from leaf level upward (hex)
 - `entry: [String]` — `[key]` for non-membership; `[key, value, marker]` for membership
@@ -180,6 +185,7 @@ let circuitInputs: SmtCircuitInputs = try smtProofToCircuitInputs(proof: smtProo
 - `membership: Bool` — true if the key exists in the tree
 
 **`SmtCircuitInputs`** fields (all decimal strings, for Circom):
+
 - `smtRoot`, `serialNumber`, `smtSiblings`, `smtOldKey`, `smtOldValue`, `smtIsOld0`
 
 ---
@@ -257,31 +263,31 @@ func runZKProof() async {
 
 ## API Reference
 
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `setupKeys(documentsPath:)` | `String` | Generate keys for both circuits |
-| `proveCertChainRs4096(documentsPath:)` | `ProofResult` | Prove cert chain (RS4096) circuit |
-| `proveUserSigRs2048(documentsPath:)` | `ProofResult` | Prove user signature (RS2048) circuit |
-| `verifyCertChainRs4096(documentsPath:)` | `Bool` | Verify cert chain proof |
-| `verifyUserSigRs2048(documentsPath:)` | `Bool` | Verify user signature proof |
-| `linkVerify(documentsPath:)` | `Bool` | Verify both proofs together |
-| `generateCertChainRs4096Input(certb64:signedResponse:tbs:issuerCertPath:smtSnapshotPath:outputDir:challenge:)` | `String` | Generate circuit input JSONs from credential data |
-| `runCompleteBenchmark(documentsPath:)` | `BenchmarkResults` | Run full pipeline and return timing/size stats |
-| `buildSmtFromSnapshot(snapshotJson:)` | `String` | Parse snapshot JSON and return the SMT root |
-| `createSmtProof(snapshotJson:keyHex:)` | `SmtProof` | Generate an SMT proof from a decompressed snapshot |
-| `createSmtProofFromGz(gzData:keyHex:)` | `SmtProof` | Generate an SMT proof from a compressed `.json.gz` snapshot |
-| `smtProofToCircuitInputs(proof:depth:)` | `SmtCircuitInputs` | Convert `SmtProof` to Circom-ready decimal inputs |
-| `verifySmtProof(proof:expectedRoot:)` | `Bool` | Verify an SMT proof against a trusted root |
+| Function                                                                                                       | Returns            | Description                                                 |
+| -------------------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------- |
+| `setupKeys(documentsPath:)`                                                                                    | `String`           | Generate keys for both circuits                             |
+| `proveCertChainRs4096(documentsPath:)`                                                                         | `ProofResult`      | Prove cert chain (RS4096) circuit                           |
+| `proveUserSigRs2048(documentsPath:)`                                                                           | `ProofResult`      | Prove user signature (RS2048) circuit                       |
+| `verifyCertChainRs4096(documentsPath:)`                                                                        | `Bool`             | Verify cert chain proof                                     |
+| `verifyUserSigRs2048(documentsPath:)`                                                                          | `Bool`             | Verify user signature proof                                 |
+| `linkVerify(documentsPath:)`                                                                                   | `Bool`             | Verify both proofs together                                 |
+| `generateCertChainRs4096Input(certb64:signedResponse:tbs:issuerCertPath:smtSnapshotPath:outputDir:challenge:)` | `String`           | Generate circuit input JSONs from credential data           |
+| `runCompleteBenchmark(documentsPath:)`                                                                         | `BenchmarkResults` | Run full pipeline and return timing/size stats              |
+| `buildSmtFromSnapshot(snapshotJson:)`                                                                          | `String`           | Parse snapshot JSON and return the SMT root                 |
+| `createSmtProof(snapshotJson:keyHex:)`                                                                         | `SmtProof`         | Generate an SMT proof from a decompressed snapshot          |
+| `createSmtProofFromGz(gzData:keyHex:)`                                                                         | `SmtProof`         | Generate an SMT proof from a compressed `.json.gz` snapshot |
+| `smtProofToCircuitInputs(proof:depth:)`                                                                        | `SmtCircuitInputs` | Convert `SmtProof` to Circom-ready decimal inputs           |
+| `verifySmtProof(proof:expectedRoot:)`                                                                          | `Bool`             | Verify an SMT proof against a trusted root                  |
 
 ## Error Handling
 
 All throwing functions throw `ZkProofError`:
 
-| Case | Description |
-|------|-------------|
-| `SetupRequired` | `prove*` or `verify*` called before `setupKeys` |
-| `FileNotFound` | A required file is missing from `documentsPath` |
-| `InvalidInput` | The input JSON is malformed or missing required fields |
-| `ProofGenerationFailed` | An error occurred during proof generation |
-| `VerificationFailed` | The proof failed verification |
-| `IoError` | A filesystem read/write error occurred |
+| Case                    | Description                                            |
+| ----------------------- | ------------------------------------------------------ |
+| `SetupRequired`         | `prove*` or `verify*` called before `setupKeys`        |
+| `FileNotFound`          | A required file is missing from `documentsPath`        |
+| `InvalidInput`          | The input JSON is malformed or missing required fields |
+| `ProofGenerationFailed` | An error occurred during proof generation              |
+| `VerificationFailed`    | The proof failed verification                          |
+| `IoError`               | A filesystem read/write error occurred                 |

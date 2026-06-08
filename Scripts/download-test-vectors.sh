@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DEST_DIR="Tests/OpenACSwiftTests/TestVectors"
-BASE_URL="https://github.com/zkmopro/zkID/releases/download/latest"
+BASE_URL="https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest"
 SMT_BASE_URL="https://github.com/moven0831/moica-revocation-smt/releases/download/snapshot-latest"
 
 TMP=$(mktemp -d)
