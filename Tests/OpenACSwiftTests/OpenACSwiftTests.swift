@@ -102,7 +102,7 @@ struct OpenACSwiftTests {
     #expect(result.proofSizeBytes > 0, "Proof should have a non-zero size.")
   }
 
-  @Test func proveDeviceSigRs2048ReturnsValidResultWithBundledInput() async throws {
+  @Test func proveUserSigRs2048ReturnsValidResultWithBundledInput() async throws {
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048InputJSONPath,
       "TestVectors/device_sig_rs2048_input.json must be copied into the test bundle (see Package.swift resources)."
@@ -118,7 +118,7 @@ struct OpenACSwiftTests {
       "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
     )
 
-    let result = try proveDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+    let result = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
     #expect(result.proveMs > 0, "Proof generation should take measurable time.")
     #expect(result.proofSizeBytes > 0, "Proof should have a non-zero size.")
@@ -144,11 +144,11 @@ struct OpenACSwiftTests {
       "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
     )
 
-    _ = try proveDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+    _ = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
     let valid = try verifyDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
 
-    #expect(valid, "Verification should succeed after a valid proveDeviceSigRs2048 call.")
+    #expect(valid, "Verification should succeed after a valid proveUserSigRs2048 call.")
   }
 
   // @Test func generateInputSucceeds() async throws {
@@ -210,11 +210,11 @@ struct OpenACSwiftTests {
   //   let validCert = try verifyCertChainRs4096(documentsPath: TestSupport.documentsPath)
 
   //   #expect(validCert, "Verification should succeed after a valid proveCertChainRs4096 call.")
-  //   _ = try proveDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+  //   _ = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
 
   //   let validDev = try verifyDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
 
-  //   #expect(validDev, "Verification should succeed after a valid proveDeviceSigRs2048 call.")
+  //   #expect(validDev, "Verification should succeed after a valid proveUserSigRs2048 call.")
 
   //   let validLink = try linkVerify(documentsPath: TestSupport.documentsPath)
 
