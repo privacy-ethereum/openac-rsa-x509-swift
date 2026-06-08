@@ -16,7 +16,7 @@ private enum TestSupport {
   }
 
   static var bundledDeviceSigRs2048R1CSPath: String? {
-    testBundle.path(forResource: "device_sig_rs2048", ofType: "r1cs", inDirectory: "TestVectors")
+    testBundle.path(forResource: "user_sig_rs2048", ofType: "r1cs", inDirectory: "TestVectors")
   }
 
   static var bundledCertChainRs4096InputJSONPath: String? {
@@ -26,7 +26,7 @@ private enum TestSupport {
 
   static var bundledDeviceSigRs2048InputJSONPath: String? {
     testBundle.path(
-      forResource: "device_sig_rs2048_input", ofType: "json", inDirectory: "TestVectors")
+      forResource: "user_sig_rs2048_input", ofType: "json", inDirectory: "TestVectors")
   }
 
   static var bundledCertChainRs4096ProvingKeyPath: String? {
@@ -36,7 +36,7 @@ private enum TestSupport {
 
   static var bundledDeviceSigRs2048ProvingKeyPath: String? {
     testBundle.path(
-      forResource: "device_sig_rs2048_proving", ofType: "key", inDirectory: "TestVectors/keys")
+      forResource: "user_sig_rs2048_proving", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledCertChainRs4096VerifyingKeyPath: String? {
@@ -46,7 +46,7 @@ private enum TestSupport {
 
   static var bundledDeviceSigRs2048VerifyingKeyPath: String? {
     testBundle.path(
-      forResource: "device_sig_rs2048_verifying", ofType: "key", inDirectory: "TestVectors/keys")
+      forResource: "user_sig_rs2048_verifying", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledMOICA_G3CertPath: String? {
@@ -75,7 +75,7 @@ struct OpenACSwiftTests {
 
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048R1CSPath,
-      "TestVectors/device_sig_rs2048.r1cs must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/user_sig_rs2048.r1cs must be copied into the test bundle (see Package.swift resources)."
     )
 
     let message = try setupKeys(
@@ -105,17 +105,17 @@ struct OpenACSwiftTests {
   @Test func proveUserSigRs2048ReturnsValidResultWithBundledInput() async throws {
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048InputJSONPath,
-      "TestVectors/device_sig_rs2048_input.json must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/user_sig_rs2048_input.json must be copied into the test bundle (see Package.swift resources)."
     )
 
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048ProvingKeyPath,
-      "TestVectors/device_sig_rs2048_proving.key must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/user_sig_rs2048_proving.key must be copied into the test bundle (see Package.swift resources)."
     )
 
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048VerifyingKeyPath,
-      "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/user_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
     )
 
     let result = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
@@ -141,7 +141,7 @@ struct OpenACSwiftTests {
   @Test func proveAndVerifyUserSigRs2048Succeeds() async throws {
     _ = try #require(
       TestSupport.bundledDeviceSigRs2048VerifyingKeyPath,
-      "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
+      "TestVectors/user_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
     )
 
     _ = try proveUserSigRs2048(documentsPath: TestSupport.documentsPath)
