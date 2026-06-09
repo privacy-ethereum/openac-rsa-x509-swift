@@ -147,7 +147,7 @@ This writes two files into `outputDir`:
 - `smtSnapshotPath` — path to the compressed SMT snapshot (`.json.gz`); pass `nil` to skip revocation checking
 - `challenge` — challenge string included in the circuit input
 
-The SMT snapshot can be downloaded from the [moica-revocation-smt snapshot release](https://github.com/moven0831/moica-revocation-smt/releases/tag/snapshot-latest) (`g3-tree-snapshot.json.gz`). Keep it compressed — the library reads it directly in gzip format.
+The SMT snapshot can be downloaded from the [moica-revocation-smt snapshot release](https://github.com/privacy-ethereum/moica-revocation-smt/releases/tag/snapshot-latest) (`g3-tree-snapshot.json.gz`). Keep it compressed — the library reads it directly in gzip format.
 
 ---
 
