@@ -29,17 +29,21 @@ targets: [
 
 Or in Xcode: **File → Add Package Dependencies**, enter the repository URL.
 
+## Example App
+
+A complete example app is available at [privacy-ethereum/OpenACExampleApp](https://github.com/privacy-ethereum/OpenACExampleApp).
+
 ## Usage
 
-Import the library and call the functions in order: `setupKeys` → `prove*` → `verify*`.
+Import the library and call the functions in order: `setupKeys` (optional) → `prove*` → `verify*`.
 
 ```swift
 import OpenACSwift
 ```
 
-### 1. Setup Keys
+### 1. Setup Keys (Optional)
 
-Generates proving and verifying keys for both circuits. Run once before any prove/verify calls.
+Generates proving and verifying keys for both circuits. **Skip this step if you already have the proving and verifying key files** — place them directly in `documentsPath/keys/` and proceed to `prove*`. Only run `setupKeys` if the key files are not yet present.
 
 ```swift
 let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].path
