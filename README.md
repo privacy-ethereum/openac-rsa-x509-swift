@@ -2,6 +2,13 @@
 
 Swift bindings for the OpenAC zero-knowledge proof system, enabling cert_chain_rs4096 and user_sig_rs2048 circuit proof generation and verification on iOS.
 
+## Introduction
+
+This package wraps the mobile bindings built from the
+[`RSA-X.509-Cert`](https://github.com/privacy-ethereum/zkID/tree/RSA-X.509-Cert)
+branch of [zkID](https://github.com/privacy-ethereum/zkID), exposing
+`setupKeys` / `prove*` / `verify*` and related circuit helpers to iOS.
+
 The prebuilt binaries are distributed via the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
 
 ## Requirements
@@ -13,11 +20,11 @@ The prebuilt binaries are distributed via the [zkID RSA-X.509-Cert latest releas
 
 ### Swift Package Manager
 
-Add OpenACSwift to your `Package.swift`:
+Add OpenACSwift to your `Package.swift`, pinned to the `RSA-X509` branch:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/privacy-ethereum/OpenACSwift", from: "1.0.0"),
+    .package(url: "https://github.com/privacy-ethereum/OpenACSwift", branch: "RSA-X509"),
 ],
 targets: [
     .target(
@@ -128,6 +135,23 @@ let linked = try linkVerify(documentsPath: documentsPath)
 
 Use `generateCertChainRs4096Input` to produce JSON input files for both circuits from raw credential data.
 
+> **Note:** `signedResponse` (and the accompanying `cert`) comes from the Taiwan FIDO service. Authenticate via [https://fido.moi.gov.tw/pt/](https://fido.moi.gov.tw/pt/) to obtain a response shaped like:
+>
+> ```json
+> {
+>   "error_code": "0",
+>   "error_message": "SUCCESS",
+>   "result": {
+>     "hashed_id_num": "...",
+>     "signed_response": "...",
+>     "idp_checksum": "...",
+>     "cert": "..."
+>   }
+> }
+> ```
+>
+> Pass `result.signed_response` as `signedResponse` and `result.cert` (base64 DER) as `certb64`.
+
 ```swift
 let outputPath = try generateCertChainRs4096Input(
     certb64: "<base64-encoded-cert>",
@@ -148,49 +172,8 @@ This writes two files into `outputDir`:
 
 **Parameters:**
 
-- `smtSnapshotPath` — path to the compressed SMT snapshot (`.json.gz`); pass `nil` to skip revocation checking
+- `smtSnapshotPath` — reserved for future revocation support; pass `nil`
 - `challenge` — challenge string included in the circuit input
-
-The SMT snapshot can be downloaded from the [moica-revocation-smt snapshot release](https://github.com/privacy-ethereum/moica-revocation-smt/releases/tag/snapshot-latest) (`g3-tree-snapshot.json.gz`). Keep it compressed — the library reads it directly in gzip format.
-
----
-
-### SMT Revocation
-
-OpenACSwift includes offline SMT (Sparse Merkle Tree) revocation checking using a local snapshot, without requiring a network call to the revocation server.
-
-#### Using the snapshot directly in `generateCertChainRs4096Input`
-
-The simplest path is to pass `smtSnapshotPath` to `generateCertChainRs4096Input` (see above). The library handles loading and proof generation internally.
-
-#### Manual SMT operations
-
-For more control, use the lower-level SMT functions:
-
-```swift
-// Load the snapshot and generate a non-membership proof for a certificate serial number
-let gzData = try Data(contentsOf: URL(fileURLWithPath: "/path/to/g3-tree-snapshot.json.gz"))
-let smtProof: SmtProof = try createSmtProofFromGz(gzData: gzData, keyHex: "0x<serial-number-hex>")
-
-// Verify the proof against the snapshot root
-let root = buildSmtFromSnapshot(snapshotJson: decompressedJsonString)
-let valid = verifySmtProof(proof: smtProof, expectedRoot: root)
-
-// Convert to Circom circuit inputs (decimal strings, siblings padded to depth)
-let circuitInputs: SmtCircuitInputs = try smtProofToCircuitInputs(proof: smtProof, depth: 160)
-```
-
-**`SmtProof`** fields:
-
-- `root: String` — tree root at proof time (hex)
-- `siblings: [String]` — sibling hashes from leaf level upward (hex)
-- `entry: [String]` — `[key]` for non-membership; `[key, value, marker]` for membership
-- `matchingEntry: [String]?` — present for non-membership proofs when a conflicting leaf exists
-- `membership: Bool` — true if the key exists in the tree
-
-**`SmtCircuitInputs`** fields (all decimal strings, for Circom):
-
-- `smtRoot`, `serialNumber`, `smtSiblings`, `smtOldKey`, `smtOldValue`, `smtIsOld0`
 
 ---
 
@@ -277,11 +260,6 @@ func runZKProof() async {
 | `linkVerify(documentsPath:)`                                                                                   | `Bool`             | Verify both proofs together                                 |
 | `generateCertChainRs4096Input(certb64:signedResponse:tbs:issuerCertPath:smtSnapshotPath:outputDir:challenge:)` | `String`           | Generate circuit input JSONs from credential data           |
 | `runCompleteBenchmark(documentsPath:)`                                                                         | `BenchmarkResults` | Run full pipeline and return timing/size stats              |
-| `buildSmtFromSnapshot(snapshotJson:)`                                                                          | `String`           | Parse snapshot JSON and return the SMT root                 |
-| `createSmtProof(snapshotJson:keyHex:)`                                                                         | `SmtProof`         | Generate an SMT proof from a decompressed snapshot          |
-| `createSmtProofFromGz(gzData:keyHex:)`                                                                         | `SmtProof`         | Generate an SMT proof from a compressed `.json.gz` snapshot |
-| `smtProofToCircuitInputs(proof:depth:)`                                                                        | `SmtCircuitInputs` | Convert `SmtProof` to Circom-ready decimal inputs           |
-| `verifySmtProof(proof:expectedRoot:)`                                                                          | `Bool`             | Verify an SMT proof against a trusted root                  |
 
 ## Error Handling
 
@@ -295,3 +273,24 @@ All throwing functions throw `ZkProofError`:
 | `ProofGenerationFailed` | An error occurred during proof generation              |
 | `VerificationFailed`    | The proof failed verification                          |
 | `IoError`               | A filesystem read/write error occurred                 |
+
+## Development
+
+> **Warning:** The `RSA-X509` branch (default) currently only supports **RSA-X509** certificates. Support for other certificate types is planned for the future. If you have changes related to RSA-X509, please send your PR to the `RSA-X509` branch.
+
+The bindings are uploaded to the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
+
+Download the bindings:
+
+```sh
+./Scripts/update-bindings.sh
+```
+
+Download the test vectors and run the tests:
+
+```sh
+./Scripts/download-test-vectors.sh
+xcodebuild test \
+    -scheme OpenACSwift \
+    -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+```
