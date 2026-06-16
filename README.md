@@ -128,7 +128,8 @@ let linked = try linkVerify(documentsPath: documentsPath)
 
 Use `generateCertChainRs4096Input` to produce JSON input files for both circuits from raw credential data.
 
-> **Note:** `signedResponse` (and the accompanying `cert`) comes from the Taiwan FIDO service. Authenticate via [https://fido.moi.gov.tw/pt/](https://fido.moi.gov.tw/pt/) to obtain a response shaped like:
+> [!NOTE]
+> `signedResponse` (and the accompanying `cert`) comes from the Taiwan FIDO service. Authenticate via [https://fido.moi.gov.tw/pt/](https://fido.moi.gov.tw/pt/) to obtain a response shaped like:
 >
 > ```json
 > {
@@ -269,7 +270,8 @@ All throwing functions throw `ZkProofError`:
 
 ## Development
 
-> **Warning:** The `RSA-X509` branch (default) currently only supports **RSA-X509** certificates. Support for other certificate types is planned for the future. If you have changes related to RSA-X509, please send your PR to the `RSA-X509` branch.
+> [!WARNING]
+> The `RSA-X509` branch (default) currently only supports **RSA-X509** certificates. Support for other certificate types is planned for the future. If you have changes related to RSA-X509, please send your PR to the `RSA-X509` branch.
 
 The bindings are uploaded to the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
 
