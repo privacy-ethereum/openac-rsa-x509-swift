@@ -17,7 +17,7 @@ Add OpenACSwift to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/privacy-ethereum/OpenACSwift", from: "1.0.0"),
+    .package(url: "https://github.com/privacy-ethereum/openac-rsa-x509-swift", from: "1.0.0"),
 ],
 targets: [
     .target(
