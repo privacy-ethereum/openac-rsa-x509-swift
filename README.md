@@ -1,13 +1,6 @@
 # OpenACSwift
 
-Swift bindings for the OpenAC zero-knowledge proof system, enabling cert_chain_rs4096 and user_sig_rs2048 circuit proof generation and verification on iOS.
-
-## Introduction
-
-This package wraps the mobile bindings built from the
-[`RSA-X.509-Cert`](https://github.com/privacy-ethereum/zkID/tree/RSA-X.509-Cert)
-branch of [zkID](https://github.com/privacy-ethereum/zkID), exposing
-`setupKeys` / `prove*` / `verify*` and related circuit helpers to iOS.
+Swift bindings for the OpenAC zero-knowledge proof system that proves and verifies **RSA-X.509-Cert** — wrapping the mobile bindings built from the [`RSA-X.509-Cert`](https://github.com/privacy-ethereum/zkID/tree/RSA-X.509-Cert) branch of [zkID](https://github.com/privacy-ethereum/zkID) to expose `setupKeys` / `prove*` / `verify*` and related circuit helpers (cert_chain_rs4096, user_sig_rs2048) for proof generation and verification on iOS.
 
 The prebuilt binaries are distributed via the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
 
