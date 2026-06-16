@@ -1,4 +1,4 @@
-# OpenACSwift
+# OpenAC RSA X.509 Certificate Swift Package
 
 Swift bindings for the OpenAC zero-knowledge proof system that proves and verifies **RSA-X.509-Cert** — wrapping the mobile bindings built from the [`RSA-X.509-Cert`](https://github.com/privacy-ethereum/zkID/tree/RSA-X.509-Cert) branch of [zkID](https://github.com/privacy-ethereum/zkID) to expose `setupKeys` / `prove*` / `verify*` and related circuit helpers (cert_chain_rs4096, user_sig_rs2048) for proof generation and verification on iOS.
 
@@ -13,11 +13,11 @@ The prebuilt binaries are distributed via the [zkID RSA-X.509-Cert latest releas
 
 ### Swift Package Manager
 
-Add OpenACSwift to your `Package.swift`, pinned to the `RSA-X509` branch:
+Add OpenACSwift to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/privacy-ethereum/OpenACSwift", branch: "RSA-X509"),
+    .package(url: "https://github.com/privacy-ethereum/OpenACSwift", from: "1.0.0"),
 ],
 targets: [
     .target(
@@ -31,7 +31,7 @@ Or in Xcode: **File → Add Package Dependencies**, enter the repository URL.
 
 ## Example App
 
-A complete example app is available at [privacy-ethereum/OpenACExampleApp](https://github.com/privacy-ethereum/OpenACExampleApp).
+A complete example app is available at [privacy-ethereum/openac-taiwan-citizen-digital-certificate-ios-example](https://github.com/privacy-ethereum/openac-taiwan-citizen-digital-certificate-ios-example).
 
 ## Usage
 
@@ -133,14 +133,14 @@ Use `generateCertChainRs4096Input` to produce JSON input files for both circuits
 >
 > ```json
 > {
->   "error_code": "0",
->   "error_message": "SUCCESS",
->   "result": {
->     "hashed_id_num": "...",
->     "signed_response": "...",
->     "idp_checksum": "...",
->     "cert": "..."
->   }
+>     "error_code": "0",
+>     "error_message": "SUCCESS",
+>     "result": {
+>         "hashed_id_num": "...",
+>         "signed_response": "...",
+>         "idp_checksum": "...",
+>         "cert": "..."
+>     }
 > }
 > ```
 >
@@ -244,16 +244,16 @@ func runZKProof() async {
 
 ## API Reference
 
-| Function                                                                                                       | Returns            | Description                                                 |
-| -------------------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------- |
-| `setupKeys(documentsPath:)`                                                                                    | `String`           | Generate keys for both circuits                             |
-| `proveCertChainRs4096(documentsPath:)`                                                                         | `ProofResult`      | Prove cert chain (RS4096) circuit                           |
-| `proveUserSigRs2048(documentsPath:)`                                                                           | `ProofResult`      | Prove user signature (RS2048) circuit                       |
-| `verifyCertChainRs4096(documentsPath:)`                                                                        | `Bool`             | Verify cert chain proof                                     |
-| `verifyUserSigRs2048(documentsPath:)`                                                                          | `Bool`             | Verify user signature proof                                 |
-| `linkVerify(documentsPath:)`                                                                                   | `Bool`             | Verify both proofs together                                 |
-| `generateCertChainRs4096Input(certb64:signedResponse:tbs:issuerCertPath:smtSnapshotPath:outputDir:challenge:)` | `String`           | Generate circuit input JSONs from credential data           |
-| `runCompleteBenchmark(documentsPath:)`                                                                         | `BenchmarkResults` | Run full pipeline and return timing/size stats              |
+| Function                                                                                                       | Returns            | Description                                       |
+| -------------------------------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------- |
+| `setupKeys(documentsPath:)`                                                                                    | `String`           | Generate keys for both circuits                   |
+| `proveCertChainRs4096(documentsPath:)`                                                                         | `ProofResult`      | Prove cert chain (RS4096) circuit                 |
+| `proveUserSigRs2048(documentsPath:)`                                                                           | `ProofResult`      | Prove user signature (RS2048) circuit             |
+| `verifyCertChainRs4096(documentsPath:)`                                                                        | `Bool`             | Verify cert chain proof                           |
+| `verifyUserSigRs2048(documentsPath:)`                                                                          | `Bool`             | Verify user signature proof                       |
+| `linkVerify(documentsPath:)`                                                                                   | `Bool`             | Verify both proofs together                       |
+| `generateCertChainRs4096Input(certb64:signedResponse:tbs:issuerCertPath:smtSnapshotPath:outputDir:challenge:)` | `String`           | Generate circuit input JSONs from credential data |
+| `runCompleteBenchmark(documentsPath:)`                                                                         | `BenchmarkResults` | Run full pipeline and return timing/size stats    |
 
 ## Error Handling
 
@@ -269,9 +269,6 @@ All throwing functions throw `ZkProofError`:
 | `IoError`               | A filesystem read/write error occurred                 |
 
 ## Development
-
-> [!WARNING]
-> The `RSA-X509` branch (default) currently only supports **RSA-X509** certificates. Support for other certificate types is planned for the future. If you have changes related to RSA-X509, please send your PR to the `RSA-X509` branch.
 
 The bindings are uploaded to the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
 
