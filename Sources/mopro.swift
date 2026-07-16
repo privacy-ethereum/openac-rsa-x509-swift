@@ -39,6 +39,52 @@ fileprivate extension ForeignBytes {
     init(bufferPointer: UnsafeBufferPointer<UInt8>) {
         self.init(len: Int32(bufferPointer.count), data: bufferPointer.baseAddress)
     }
+
+    init(rawBufferPointer: UnsafeRawBufferPointer) {
+        self.init(
+            len: Int32(rawBufferPointer.count),
+            data: rawBufferPointer.baseAddress?.assumingMemoryBound(to: UInt8.self)
+        )
+    }
+}
+
+// Converter for `&[u8]` / `[ByRef] bytes` arguments.
+//
+// Conforms to `FfiConverter` so the compiler enforces the full converter
+// method set. Only the scope-bound `lower(_:_body:)` overload is sound —
+// zero-copy byte buffers only flow foreign -> Rust, and only in argument
+// position. The four protocol-witness methods (`lift`, `lower`, `read`,
+// `write`) `fatalError` at runtime if anyone reaches them.
+//
+// The scope-bound `lower` takes a closure because the `ForeignBytes`
+// pointer is only guaranteed valid for the duration of
+// `Data.withUnsafeBytes`. Callers must run the full FFI call inside
+// the closure body.
+fileprivate enum FfiConverterByRefBytes: FfiConverter {
+    typealias SwiftType = Data
+    typealias FfiType = ForeignBytes
+
+    static func lower<R>(_ value: Data, _ body: (ForeignBytes) throws -> R) rethrows -> R {
+        return try value.withUnsafeBytes { rawBuf in
+            try body(ForeignBytes(rawBufferPointer: rawBuf))
+        }
+    }
+
+    static func lower(_ value: Data) -> ForeignBytes {
+        fatalError("ByRef bytes cannot use the plain lower: returning ForeignBytes escapes the Data.withUnsafeBytes scope. Use the scope-bound lower(_:_body:) overload instead.")
+    }
+
+    static func lift(_ value: ForeignBytes) throws -> Data {
+        fatalError("ByRef bytes cannot be lifted: zero-copy &[u8] only flows foreign->Rust")
+    }
+
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        fatalError("ByRef bytes cannot be read from a buffer: zero-copy &[u8] is only supported in argument position, not nested in records/options/etc.")
+    }
+
+    static func write(_ value: Data, into buf: inout [UInt8]) {
+        fatalError("ByRef bytes cannot be written to a buffer: zero-copy &[u8] is only supported in argument position, not nested in records/options/etc.")
+    }
 }
 
 // For every type used in the interface, we provide helper methods for conveniently
@@ -352,19 +398,29 @@ private func uniffiTraitInterfaceCallWithError<T, E>(
         callStatus.pointee.errorBuf = FfiConverterString.lower(String(describing: error))
     }
 }
+// Initial value and increment amount for handles. 
+// These ensure that SWIFT handles always have the lowest bit set
+fileprivate let UNIFFI_HANDLEMAP_INITIAL: UInt64 = 1
+fileprivate let UNIFFI_HANDLEMAP_DELTA: UInt64 = 2
+
 fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
     // All mutation happens with this lock held, which is why we implement @unchecked Sendable.
     private let lock = NSLock()
     private var map: [UInt64: T] = [:]
-    private var currentHandle: UInt64 = 1
+    private var currentHandle: UInt64 = UNIFFI_HANDLEMAP_INITIAL
 
     func insert(obj: T) -> UInt64 {
         lock.withLock {
-            let handle = currentHandle
-            currentHandle += 1
-            map[handle] = obj
-            return handle
+            return doInsert(obj)
         }
+    }
+
+    // Low-level insert function, this assumes `lock` is held.
+    private func doInsert(_ obj: T) -> UInt64 {
+        let handle = currentHandle
+        currentHandle += UNIFFI_HANDLEMAP_DELTA
+        map[handle] = obj
+        return handle
     }
 
      func get(handle: UInt64) throws -> T {
@@ -373,6 +429,15 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
                 throw UniffiInternalError.unexpectedStaleHandle
             }
             return obj
+        }
+    }
+
+     func clone(handle: UInt64) throws -> UInt64 {
+        try lock.withLock {
+            guard let obj = map[handle] else {
+                throw UniffiInternalError.unexpectedStaleHandle
+            }
+            return doInsert(obj)
         }
     }
 
@@ -468,7 +533,11 @@ fileprivate struct FfiConverterString: FfiConverter {
             return String()
         }
         let bytes = UnsafeBufferPointer<UInt8>(start: value.data!, count: Int(value.len))
-        return String(bytes: bytes, encoding: String.Encoding.utf8)!
+        // Use Swift's native UTF-8 decoder; `String(bytes:encoding:.utf8)` goes
+        // through Foundation's NSString and silently strips a leading U+FEFF BOM.
+        // Invalid UTF-8 substitutes U+FFFD instead of trapping (unreachable
+        // given Rust's `String` invariant).
+        return String(decoding: bytes, as: UTF8.self)
     }
 
     public static func lower(_ value: String) -> RustBuffer {
@@ -484,7 +553,8 @@ fileprivate struct FfiConverterString: FfiConverter {
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
         let len: Int32 = try readInt(&buf)
-        return String(bytes: try readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
+        // See `lift` above for why we avoid Foundation's NSString-backed decoder here.
+        return String(decoding: try readBytes(&buf, count: Int(len)), as: UTF8.self)
     }
 
     public static func write(_ value: String, into buf: inout [UInt8]) {
@@ -516,7 +586,7 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 /**
  * Result of a complete benchmark run with timing and size metrics
  */
-public struct BenchmarkResults {
+public struct BenchmarkResults: Equatable, Hashable {
     public var setupMs: UInt64
     public var proveMs: UInt64
     public var verifyMs: UInt64
@@ -536,51 +606,15 @@ public struct BenchmarkResults {
         self.proofBytes = proofBytes
         self.witnessBytes = witnessBytes
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
 extension BenchmarkResults: Sendable {}
 #endif
-
-
-extension BenchmarkResults: Equatable, Hashable {
-    public static func ==(lhs: BenchmarkResults, rhs: BenchmarkResults) -> Bool {
-        if lhs.setupMs != rhs.setupMs {
-            return false
-        }
-        if lhs.proveMs != rhs.proveMs {
-            return false
-        }
-        if lhs.verifyMs != rhs.verifyMs {
-            return false
-        }
-        if lhs.provingKeyBytes != rhs.provingKeyBytes {
-            return false
-        }
-        if lhs.verifyingKeyBytes != rhs.verifyingKeyBytes {
-            return false
-        }
-        if lhs.proofBytes != rhs.proofBytes {
-            return false
-        }
-        if lhs.witnessBytes != rhs.witnessBytes {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(setupMs)
-        hasher.combine(proveMs)
-        hasher.combine(verifyMs)
-        hasher.combine(provingKeyBytes)
-        hasher.combine(verifyingKeyBytes)
-        hasher.combine(proofBytes)
-        hasher.combine(witnessBytes)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -630,7 +664,7 @@ public func FfiConverterTypeBenchmarkResults_lower(_ value: BenchmarkResults) ->
  * Result of a proving operation with timing and proof metadata.
  * `prove_ms` is the total time for both circuits; `proof_size_bytes` is the combined size.
  */
-public struct ProofResult {
+public struct ProofResult: Equatable, Hashable {
     public var proveMs: UInt64
     public var proofSizeBytes: UInt64
 
@@ -640,31 +674,15 @@ public struct ProofResult {
         self.proveMs = proveMs
         self.proofSizeBytes = proofSizeBytes
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
 extension ProofResult: Sendable {}
 #endif
-
-
-extension ProofResult: Equatable, Hashable {
-    public static func ==(lhs: ProofResult, rhs: ProofResult) -> Bool {
-        if lhs.proveMs != rhs.proveMs {
-            return false
-        }
-        if lhs.proofSizeBytes != rhs.proofSizeBytes {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(proveMs)
-        hasher.combine(proofSizeBytes)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -704,7 +722,7 @@ public func FfiConverterTypeProofResult_lower(_ value: ProofResult) -> RustBuffe
  * Circom-ready SMT inputs — all values as decimal strings, siblings padded to depth.
  * Mirrors `ecdsa_spartan2::smt_client::SmtCircuitInputs`.
  */
-public struct SmtCircuitInputs {
+public struct SmtCircuitInputs: Equatable, Hashable {
     public var smtRoot: String
     public var serialNumber: String
     public var smtSiblings: [String]
@@ -722,47 +740,15 @@ public struct SmtCircuitInputs {
         self.smtOldValue = smtOldValue
         self.smtIsOld0 = smtIsOld0
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
 extension SmtCircuitInputs: Sendable {}
 #endif
-
-
-extension SmtCircuitInputs: Equatable, Hashable {
-    public static func ==(lhs: SmtCircuitInputs, rhs: SmtCircuitInputs) -> Bool {
-        if lhs.smtRoot != rhs.smtRoot {
-            return false
-        }
-        if lhs.serialNumber != rhs.serialNumber {
-            return false
-        }
-        if lhs.smtSiblings != rhs.smtSiblings {
-            return false
-        }
-        if lhs.smtOldKey != rhs.smtOldKey {
-            return false
-        }
-        if lhs.smtOldValue != rhs.smtOldValue {
-            return false
-        }
-        if lhs.smtIsOld0 != rhs.smtIsOld0 {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(smtRoot)
-        hasher.combine(serialNumber)
-        hasher.combine(smtSiblings)
-        hasher.combine(smtOldKey)
-        hasher.combine(smtOldValue)
-        hasher.combine(smtIsOld0)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -809,7 +795,7 @@ public func FfiConverterTypeSmtCircuitInputs_lower(_ value: SmtCircuitInputs) ->
 /**
  * SMT proof from the moica-revocation-smt server, all values as hex strings.
  */
-public struct SmtProof {
+public struct SmtProof: Equatable, Hashable {
     /**
      * Tree root at proof time (hex string).
      */
@@ -855,43 +841,15 @@ public struct SmtProof {
         self.matchingEntry = matchingEntry
         self.membership = membership
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
 extension SmtProof: Sendable {}
 #endif
-
-
-extension SmtProof: Equatable, Hashable {
-    public static func ==(lhs: SmtProof, rhs: SmtProof) -> Bool {
-        if lhs.root != rhs.root {
-            return false
-        }
-        if lhs.siblings != rhs.siblings {
-            return false
-        }
-        if lhs.entry != rhs.entry {
-            return false
-        }
-        if lhs.matchingEntry != rhs.matchingEntry {
-            return false
-        }
-        if lhs.membership != rhs.membership {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(root)
-        hasher.combine(siblings)
-        hasher.combine(entry)
-        hasher.combine(matchingEntry)
-        hasher.combine(membership)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -936,7 +894,8 @@ public func FfiConverterTypeSmtProof_lower(_ value: SmtProof) -> RustBuffer {
 /**
  * Errors that can occur during ZK proof operations
  */
-public enum ZkProofError {
+public 
+enum ZkProofError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
     
     
@@ -952,8 +911,21 @@ public enum ZkProofError {
     )
     case IoError(msg: String
     )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
 }
 
+#if compiler(>=6)
+extension ZkProofError: Sendable {}
+#endif
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1046,18 +1018,6 @@ public func FfiConverterTypeZkProofError_lower(_ value: ZkProofError) -> RustBuf
     return FfiConverterTypeZkProofError.lower(value)
 }
 
-
-extension ZkProofError: Equatable, Hashable {}
-
-
-
-extension ZkProofError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
-
-
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -1138,8 +1098,9 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
  */
 public func buildSmtFromSnapshot(snapshotJson: String) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_build_smt_from_snapshot(
-        FfiConverterString.lower(snapshotJson),$0
+        FfiConverterString.lower(snapshotJson),uniffiCallStatus
     )
 })
 }
@@ -1154,9 +1115,10 @@ public func buildSmtFromSnapshot(snapshotJson: String) -> String  {
  */
 public func createSmtProof(snapshotJson: String, keyHex: String)throws  -> SmtProof  {
     return try  FfiConverterTypeSmtProof_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_create_smt_proof(
         FfiConverterString.lower(snapshotJson),
-        FfiConverterString.lower(keyHex),$0
+        FfiConverterString.lower(keyHex),uniffiCallStatus
     )
 })
 }
@@ -1171,9 +1133,10 @@ public func createSmtProof(snapshotJson: String, keyHex: String)throws  -> SmtPr
  */
 public func createSmtProofFromGz(gzData: Data, keyHex: String)throws  -> SmtProof  {
     return try  FfiConverterTypeSmtProof_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_create_smt_proof_from_gz(
         FfiConverterData.lower(gzData),
-        FfiConverterString.lower(keyHex),$0
+        FfiConverterString.lower(keyHex),uniffiCallStatus
     )
 })
 }
@@ -1192,6 +1155,7 @@ public func createSmtProofFromGz(gzData: Data, keyHex: String)throws  -> SmtProo
  */
 public func generateCertChainRs4096Input(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtSnapshotPath: String?, outputDir: String, challenge: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_generate_cert_chain_rs4096_input(
         FfiConverterString.lower(certb64),
         FfiConverterString.lower(signedResponse),
@@ -1199,7 +1163,7 @@ public func generateCertChainRs4096Input(certb64: String, signedResponse: String
         FfiConverterString.lower(issuerCertPath),
         FfiConverterOptionString.lower(smtSnapshotPath),
         FfiConverterString.lower(outputDir),
-        FfiConverterString.lower(challenge),$0
+        FfiConverterString.lower(challenge),uniffiCallStatus
     )
 })
 }
@@ -1208,8 +1172,9 @@ public func generateCertChainRs4096Input(certb64: String, signedResponse: String
  */
 public func linkVerify(documentsPath: String)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_link_verify(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1218,7 +1183,8 @@ public func linkVerify(documentsPath: String)throws  -> Bool  {
  */
 public func moproHelloWorld() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_openac_mobile_app_fn_func_mopro_hello_world($0
+        uniffiCallStatus in
+    uniffi_openac_mobile_app_fn_func_mopro_hello_world(uniffiCallStatus
     )
 })
 }
@@ -1235,8 +1201,9 @@ public func moproHelloWorld() -> String  {
  */
 public func proveCertChainRs4096(documentsPath: String)throws  -> ProofResult  {
     return try  FfiConverterTypeProofResult_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_prove_cert_chain_rs4096(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1254,8 +1221,9 @@ public func proveCertChainRs4096(documentsPath: String)throws  -> ProofResult  {
  */
 public func proveUserSigRs2048(documentsPath: String)throws  -> ProofResult  {
     return try  FfiConverterTypeProofResult_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_prove_user_sig_rs2048(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1270,8 +1238,9 @@ public func proveUserSigRs2048(documentsPath: String)throws  -> ProofResult  {
  */
 public func runCompleteBenchmark(documentsPath: String)throws  -> BenchmarkResults  {
     return try  FfiConverterTypeBenchmarkResults_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_run_complete_benchmark(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1283,8 +1252,9 @@ public func runCompleteBenchmark(documentsPath: String)throws  -> BenchmarkResul
  */
 public func setupKeys(documentsPath: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_setup_keys(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1297,9 +1267,10 @@ public func setupKeys(documentsPath: String)throws  -> String  {
  */
 public func smtProofToCircuitInputs(proof: SmtProof, depth: UInt32)throws  -> SmtCircuitInputs  {
     return try  FfiConverterTypeSmtCircuitInputs_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_smt_proof_to_circuit_inputs(
         FfiConverterTypeSmtProof_lower(proof),
-        FfiConverterUInt32.lower(depth),$0
+        FfiConverterUInt32.lower(depth),uniffiCallStatus
     )
 })
 }
@@ -1308,8 +1279,9 @@ public func smtProofToCircuitInputs(proof: SmtProof, depth: UInt32)throws  -> Sm
  */
 public func verifyCertChainRs4096(documentsPath: String)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_verify_cert_chain_rs4096(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1322,9 +1294,10 @@ public func verifyCertChainRs4096(documentsPath: String)throws  -> Bool  {
  */
 public func verifySmtProof(proof: SmtProof, expectedRoot: String) -> Bool  {
     return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_verify_smt_proof(
         FfiConverterTypeSmtProof_lower(proof),
-        FfiConverterString.lower(expectedRoot),$0
+        FfiConverterString.lower(expectedRoot),uniffiCallStatus
     )
 })
 }
@@ -1333,8 +1306,9 @@ public func verifySmtProof(proof: SmtProof, expectedRoot: String) -> Bool  {
  */
 public func verifyUserSigRs2048(documentsPath: String)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+        uniffiCallStatus in
     uniffi_openac_mobile_app_fn_func_verify_user_sig_rs2048(
-        FfiConverterString.lower(documentsPath),$0
+        FfiConverterString.lower(documentsPath),uniffiCallStatus
     )
 })
 }
@@ -1348,52 +1322,52 @@ private enum InitializationResult {
 // the code inside is only computed once.
 private let initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
-    let bindings_contract_version = 29
+    let bindings_contract_version = 30
     // Get the scaffolding contract version by calling the into the dylib
     let scaffolding_contract_version = ffi_openac_mobile_app_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_build_smt_from_snapshot() != 37072) {
+    if (uniffi_openac_mobile_app_checksum_func_build_smt_from_snapshot() != 18712) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_create_smt_proof() != 25623) {
+    if (uniffi_openac_mobile_app_checksum_func_create_smt_proof() != 33141) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_create_smt_proof_from_gz() != 33213) {
+    if (uniffi_openac_mobile_app_checksum_func_create_smt_proof_from_gz() != 36175) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 13849) {
+    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 35169) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_link_verify() != 54000) {
+    if (uniffi_openac_mobile_app_checksum_func_link_verify() != 26183) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_mopro_hello_world() != 46672) {
+    if (uniffi_openac_mobile_app_checksum_func_mopro_hello_world() != 6259) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_prove_cert_chain_rs4096() != 42180) {
+    if (uniffi_openac_mobile_app_checksum_func_prove_cert_chain_rs4096() != 24766) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_prove_user_sig_rs2048() != 56957) {
+    if (uniffi_openac_mobile_app_checksum_func_prove_user_sig_rs2048() != 60547) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 17448) {
+    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 33093) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 42464) {
+    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 30998) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_smt_proof_to_circuit_inputs() != 957) {
+    if (uniffi_openac_mobile_app_checksum_func_smt_proof_to_circuit_inputs() != 60154) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify_cert_chain_rs4096() != 13705) {
+    if (uniffi_openac_mobile_app_checksum_func_verify_cert_chain_rs4096() != 22769) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify_smt_proof() != 34213) {
+    if (uniffi_openac_mobile_app_checksum_func_verify_smt_proof() != 5752) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify_user_sig_rs2048() != 61446) {
+    if (uniffi_openac_mobile_app_checksum_func_verify_user_sig_rs2048() != 62724) {
         return InitializationResult.apiChecksumMismatch
     }
 

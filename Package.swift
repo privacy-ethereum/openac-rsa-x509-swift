@@ -42,7 +42,7 @@ let package = Package(
     .binaryTarget(
       name: "OpenACSwiftBindings",
       url: "https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/MoproBindings.xcframework.zip",
-      checksum: "4553a524cb138aa298dcab1a255b6769746feafe8824f1e5ef7552c643cc983d"
+      checksum: "18a0d2df904617050462134e490e9e9b0b1ee24207c4607fae4be2293b3c5a02"
     ),
     .testTarget(
       name: "OpenACSwiftTests",
